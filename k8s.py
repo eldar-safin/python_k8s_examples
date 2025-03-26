@@ -7,16 +7,23 @@ DEFAULT_NAMESPACE = 'default'
 
 
 class Pod:
+    cpu_request = None
+    memory_request = None
+    cpu_limit = None
+    memory_limit = None
+
     def __init__(self, raw_data) -> None:
         raw_container = raw_data.spec.containers[0]
         raw_resources = raw_container.resources
         self.name = raw_data.metadata.name
         self.namespace = raw_data.metadata.namespace
         self.image = raw_container.image
-        self.cpu_limit = raw_resources.limits.get('cpu')
-        self.cpu_request = raw_resources.requests.get('cpu')
-        self.memory_limit = raw_resources.limits.get('memory')
-        self.memory_request = raw_resources.requests.get('memory')
+        if raw_resources.requests:
+            self.cpu_request = raw_resources.requests.get('cpu')
+            self.memory_request = raw_resources.requests.get('memory')
+        if raw_resources.limits:
+            self.cpu_limit = raw_resources.limits.get('cpu')
+            self.memory_limit = raw_resources.limits.get('memory')
         self.created_at = raw_data.metadata.creation_timestamp
         self.ip = raw_data.status.pod_ip
 
@@ -36,6 +43,8 @@ class K8S:
         self.api_client = client.CoreV1Api()
 
     def get_pods(self, namespace: str = DEFAULT_NAMESPACE) -> list[Pod]:
+        if not namespace:
+            namespace = DEFAULT_NAMESPACE
         raw_pods = self.api_client.list_namespaced_pod(namespace=namespace)
         return [Pod(raw_data=data) for data in raw_pods.items]
 
